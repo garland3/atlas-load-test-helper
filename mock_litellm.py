@@ -33,7 +33,7 @@ def verify(authorization: str | None):
     try:
         key = JWKS.get_signing_key_from_jwt(token).key
         return jwt.decode(token, key, algorithms=["RS256"], issuer=ISSUER, audience=AUDIENCE, leeway=5)
-    except (jwt.PyJWTError, Exception) as exc:
+    except Exception as exc:
         raise HTTPException(401, "invalid_token") from exc
 
 @app.get("/health")
@@ -72,12 +72,12 @@ async def completions(body: Chat, authorization: str | None = Header(default=Non
         def event(delta, finish=None):
             return "data: " + json.dumps({**base, "choices": [
                 {"index": 0, "delta": delta, "finish_reason": finish}
-            ]}) + "\\n\\n"
+            ]}) + "\n\n"
         yield event({"role": "assistant", "content": ""})
         for _ in range(n):
             await asyncio.sleep(DELAY)
             yield event({"content": " load"})
         yield event({}, "stop")
-        yield "data: [DONE]\\n\\n"
+        yield "data: [DONE]\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
