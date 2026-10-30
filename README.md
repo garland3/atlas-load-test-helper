@@ -43,6 +43,27 @@ curl -fsS http://localhost:8002/v1/chat/completions \
 
 For streamed output set `"stream":true` and add `-N` to curl.
 
+
+## Docker
+
+One image runs either service, selected with `APP_MODULE`. Both need the same `OIDC_ISSUER`, which must be resolvable by the mock LiteLLM container and by ATLAS.
+
+```bash
+docker build -t atlas-load-helper .
+docker network create atlas-load-net
+
+docker run -d --name mock-oidc --network atlas-load-net -p 8001:8000 \
+  -e OIDC_ISSUER=http://mock-oidc:8000 \
+  atlas-load-helper
+
+docker run -d --name mock-litellm --network atlas-load-net -p 8002:8000 \
+  -e APP_MODULE=mock_litellm \
+  -e OIDC_ISSUER=http://mock-oidc:8000 \
+  atlas-load-helper
+```
+
+The IdP is reachable from the host at `http://localhost:8001` and the LLM mock at `http://localhost:8002`. JWT issuer and JWKS URLs use `http://mock-oidc:8000`, so any ATLAS instance validating these tokens must resolve that hostname (e.g., join the Docker network or use an appropriately configured DNS address). For production-like load testing, provide a mounted persistent signing key via `OIDC_PRIVATE_KEY_FILE` and use an isolated test network.
+
 ## Configuration
 
 | Variable | Default | Use |
